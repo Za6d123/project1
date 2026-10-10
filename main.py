@@ -1,81 +1,106 @@
-total = 0
 expected_id = ""
 coupon = ["SAVE10", "VIP20"]
 n_coupon = "NONE"
 c = []
 saved_order = []
+N = 0
+A = 0
+R = 0
+T = 0
+G = 0
+P = 0
 
-a = input("Enter order details: ")   #"OD0001|0901234567|2|100000|SAVE10"  #test
-while True:
-    if len(a.split("|")) != 5:
-        print("WRONG FORMAT")
-        a = input("Enter order details: ")
-        continue
-    else:
+for attempt in range(100):
+    N += 1
+    a = input("Enter order details: ")
+    raw = a.strip()
+    upper = raw.upper()
+
+    if upper == "QUIT":
+        print("REPORT| ","N = ", N, "| A = ", A, "| R = ", R, "| T = ", T, "| G = ", G, "| P = ", P)
+        break
+    if upper == "REPORT":
+        print("REPORT| ","N = ", N, "| A = ", A, "| R = ", R, "| T = ", T, "| G = ", G, "| P = ", P)
+        print("Saved Orders: ", saved_order)
         break
 
-if a == "QUIT":
-    print("Total: ", total)
-    exit()
-if a == "REPORT":  
-    print("Total: ", total)
-    print("Saved Orders: ", saved_order)
-    exit()
+    if N >= 100:
+        print("REPORT| ","N = ", N, "| A = ", A, "| R = ", R, "| T = ", T, "| G = ", G, "| P = ", P)
+        break
 
-after = a.strip()
+    parts = raw.split("|")
+    parts[0] = parts[0].strip('"')
+    parts[1] = parts[1].strip('"')
+    parts[2] = parts[2].strip('"')
+    parts[3] = parts[3].strip('"')
+    parts[4] = parts[4].strip('"')
 
-b = after.split("|")
+    if len(parts) != 5:
+        print("E_FORMAT")
+        R += 1
+        continue
 
-b[0] = b[0].upper()
-b[4] = b[4].upper()
+    parts[0] = parts[0].upper()
+    parts[4] = parts[4].upper()
 
+    if len(raw) > 120:
+        print("E_LENGTH")
+        R += 1
+    elif raw.count("|") != 4:
+        print("E_FORMAT")
+        R += 1
+    elif any(part.strip() == "" for part in raw.split("|")):
+        print("E_EMPTY")
+        R += 1
+    elif not (len(parts[0]) == 6 and parts[0].startswith("OD")):
+        print("E_ID")
+        print(parts[0])
+        R += 1
+    elif not (len(parts[1]) == 10 and parts[1].isdigit() and parts[1].startswith("0")):
+        print("E_PHONE")
+        R += 1
+    elif not (parts[2].isdigit() and int(parts[2]) > 0 and int(parts[2]) < 100):
+        print("E_QUANTITY")
+        R += 1
+    elif not (parts[3].isdigit() and len(parts[3]) <= 8 and int(parts[3]) > 0 and int(parts[3]) < 10000000):
+        print("E_PRICE")
+        R += 1
+    elif parts[4] not in coupon and parts[4] != n_coupon:
+        print("E_COUPON")
+        R += 1
+    elif parts[0] in c:
+        print("E_DUP")
+        R += 1
+    else:
+        c.append(parts[0])
+        price = int(parts[3])
+        qty = int(parts[2])
+        subtotal = price * qty
+        discount = 0
 
-if len(after) > 120:
-    print("E_LENGTH")
-elif after.count("|") != 4:
-    print("E_FORMAT")
-elif any(part.strip() == "" for part in after.split("|")):
-    print("E_EMPTY")
-elif not (len(b[0]) == 6 and b[0].startswith("OD")):
-    print("E_ID")
-elif not (len(b[1]) == 10 and b[1].isdigit() and b[1].startswith("0")):
-    print("E_PHONE")
-elif not (b[2].isdigit() and int(b[2]) > 0 and int(b[2]) < 100):
-    print("E_QUANTITY")
-elif not (b[3].isdigit() and len(b[3]) <= 8 and int(b[3]) > 0 and int(b[3]) < 10000000):
-    print("E_PRICE")
-elif b[4] not in coupon and b[4] != n_coupon:
-    print("E_COUPON")
-elif b[0] not in c:
-    c.append(b[0])  
-    if b[4] == "SAVE10":
-        if min(int(b[3]), 200000) >= 200000:
-            if (money * 10)/100 >= 50000:
-                print("E_RULE")
-            else:
-                money = int(b[3]) - (int(b[3]) * 10) / 100
-                total += money
-    elif b[4] == "VIP20":
-        if min(int(b[3]), 500000) >= 500000:
-            if (money * 20)/100 >= 100000:
-                print("E_RULE")
-            else:
-                money = int(b[3]) - (int(b[3]) * 20) / 100
-                total += money
-    elif b[4] == "NONE":
-        money = int(b[3])
-        total += money
-elif b[0] in c:
-    print("E_DUP")
-else:
-    print("ACCEPTED| ", b[0], "|", b[1], "|", b[2], "|", b[3], "|", b[4])  
+        if parts[4] == "SAVE10":
+            if subtotal >= 200000:
+                discount = min(subtotal * 10 / 100, 200000)
+                if discount >= 50000:
+                    print("E_RULE")
+                    R += 1
+                    c.pop()
+                    continue
+        elif parts[4] == "VIP20":
+            if subtotal >= 500000:
+                discount = min(subtotal * 20 / 100, 500000)
+                if discount >= 100000:
+                    print("E_RULE")
+                    R += 1
+                    c.pop()
+                    continue
 
-
-
-
-
-
-
-
-
+        amount_paid = subtotal - discount
+        T += subtotal
+        G += discount
+        P += amount_paid
+        A += 1
+        saved_order.append(parts[0])
+        print("ACCEPTED| ", parts[0], "| ", parts[1], "| ", parts[2], "| ", parts[3], "| ", parts[4], "| ", amount_paid)
+        print(c, saved_order, T, G, P)
 
